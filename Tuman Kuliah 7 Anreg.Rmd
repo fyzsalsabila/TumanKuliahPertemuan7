@@ -1,0 +1,172 @@
+---
+title: "Tuman Kuliah 7 Anreg"
+author: "Salsabila Fayiza_G1401221036"
+date: "2024-03-05"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(readxl)
+dataxy <- read_excel(path = "D:/IPB/SEMESTER 4/Analisis Regresi/pertemuan 7/data.xlsx")
+dataxy
+```
+
+#Eksplorasi Data
+```{r}
+plot(x = data$X, y = data$Y)
+
+```
+Scatter plot di atas menunjukkan X dan Y tidak berhubungan linear.Data menyebar secara eksponensial, tanpa ada data pencilan.\
+
+#Uji Normalisasi
+```{r}
+qqnorm(data$Y)
+qqline(data$Y, col = "lightpink") 
+```
+```{r}
+shapiro.test(data$Y)
+```
+Hasil menyebar normal berdasarkan hasil test yang lebih dari 0.05 walaupun qqplot menunjukkan asumsi bahwa data tersebut tidak menyebar normal.
+
+#Uji Homoskedastisitas
+```{r}
+plot(model_lm, which = 1)
+```
+Dari Uji Homoskedastisitas ini, dapat dilihat bahwa varians residual bernilai konstan. Varian residual ini cenderung meningkat seiring dengan nilai prediksi. Sehingga dapat disimpulkan adanya Homoskedastisitas.
+
+##Transformasi
+#Transformasi Akar pada x, y, atau X dan y
+```{r}
+y_trans <- log(y)
+
+plot(x, y_trans)
+abline(lm (y_trans ~ x))
+```
+
+```{r}
+plot(model_sqrtx)
+```
+Setelah dilakukan transformasi terlihat data bergerak linear.
+
+# melakukan transformasi pada parameter
+```{r}
+b0 <- log(alfa)
+b1 <- beta
+round(b0,3)
+round(b1,3)
+```
+```{r}
+yduga_trans <- b0 + b1*x
+galat_trans <- y_trans - yduga_trans
+
+tabelnilai_trans <- data.frame(x, y_trans, yduga_trans, galat_trans)
+tabelnilai_trans
+```
+Setelah perhitungan diatas, diperoleh persamaan regrasi linear sederhana dari eksponensial setelah ditransformasi adalah : y duga = 4.037-0.038X
+
+```{r}
+model <- lm(y_trans ~ x)
+summary(model)
+```
+Dapat dilihat bahwa benar nilai intersep dan slope pada anova sama dengan nilai beta0 dan beta1 yang ditransformasi secara manual. Persamaan regresi ini cenderung merupakan model regresi terbaik jika dilihat melalui nilai R-Squared mendekati 1.Setelah melakukan transformasi seperti diatas, dapat disimpulkan jika transformasi akar Y membuat persamaan regresi menjadi lebih efektif. Model regresi setelah transformasi : 
+Y* = 4.037159 - 0.0379745X
+Y* = akar Y
+
+jika dilakukan transformasi balik menjadi:
+Y = (4.037159-0.037974X)^2
+
+Interpretasi Persamaan regresi menunjukkan hubungan kuadrat negatif antara Y dan X. Ketika nilai X bertambah, nilai Y cenderung berkurang dengan kecepatan yang semakin cepat. Koefisien regresi dan perubahan Y untuk perubahan X membantu mengukur pengaruh X pada Y. Konstanta 4.037159 mewakili nilai Y ketika X sama dengan 0. Koefisien -0.0379745 menunjukkan pengaruh perubahan X terhadap Y. Semakin besar nilai absolut koefisien, semakin besar pengaruh X terhadap Y.
+
+## Uji Asumsi
+```{r}
+# plot persebaran nilai ragam
+plot(model, 1)
+```
+Dapat dilihat bahwa data memiliki lebar keragaman yang berbeda (ragam cenderung berbentuk corong) dan  masih berada di sekitar 0. Ragam bersifat Heterodixcity
+
+Uji Breusch-Pagan dilakukan sebagai pembuktian
+H0 : Ragam Homogen
+H1 : Ragam tidak homogen
+
+```{r}
+library(lmtest)
+homogen <- bptest(model)
+homogen
+```
+Nilai P-value pada uji kehomogonan itu menyatakan ada perbedaan yang cukup signifikan dalam galat yakni bernilai 0.008365. Galat tidak homogen dan cenderung berbentuk corong. Dibutuhkan analisis kuadrat tekecil terboboti.
+
+```{r}
+plot(x = 1:dim(tabelnilai_trans)[1],
+     y = model$residuals,
+     type = 'b')
+```
+Ragam membentuk suatu pola dari kecil ke besar :
+H0 : Galat acak saling bebas
+H1 : Galat tak acak dan tak saling bebas
+
+#uji runs.test
+```{r}
+library(randtests)
+runs.test(model$residuals)
+```
+Nilai p-value > 0.05,maka terima H0 dengan galat acak saling bebas
+
+```{r}
+plot(model, 2)
+```
+Plot QQ galat terlihat sebaran yang cenderung simetris dengan ujung-ujung menipis.
+H0 = data menyebar normal
+H1 = Data tidak menyebar normal
+
+#shapiro-wilk test
+```{r}
+shapiro.test(model$residuals)
+```
+p-value > 0.05.Maka terima H0 yaitu data menyebar normal.Dari 3 asumsi Gauss-Markov, 1 asumsi tidak terpenuhi yaitu asumsi galat menyebar homogen. 
+
+#WLS
+```{r}
+bobot <- 1/((model$fitted.values)^2)
+
+wls_model <- lm(y_trans ~ x, data = tabelnilai_trans, weights = bobot)
+summary(wls_model)
+```
+```{r}
+homogen2 <- bptest(wls_model)
+homogen2
+```
+
+Setelah dilakukan pembobotan, galat bernilai homogen. Hal ini dapat dilihat melalui standar error sisaan yang berkurang dari 0.1794 menjadi 0.09149. Akan tetapi nilai R-Squared juga berkurang dari 0.9551 menjadi 0.9194 yang menandakan bahwa regresi terbobot ini tak lebih mewakilkan nilai y terhadap x dibandingkan regresi awal sebelum dilakukan pembobotan.
+
+Persamaan regrasi : y duga = 4.012 - 0.037X.
+
+```{r}
+yduga <- 4.012 - 0.037*x
+tabelnilairegresi <- data.frame(y_trans, yduga)
+tabelnilairegresi
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
